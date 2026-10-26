@@ -1,6 +1,6 @@
 # Autonomous Headless Codex Desktop on Proxmox LXC (Debian 13)
 
-Deploy an autonomous, headless instance of **Codex Desktop** inside a Proxmox LXC container running **Debian 13 (Trixie)**. This project includes a complete virtual desktop stack (`Xvfb`, `openbox`, `x11vnc`), a custom lightweight full-screen web wrapper (`Flask` + `FFmpeg`), and pre-configured **openHAB MCP Server** integration via `mcp-remote`.
+Deploy an autonomous, headless instance of **Codex Desktop** inside a Proxmox LXC container running **Debian 13 (Trixie)**. This project includes a complete virtual desktop stack (`Xvfb`, `openbox`, `x11vnc`), a custom lightweight full-screen web wrapper (`Flask` + `FFmpeg`), building/installing Codex from the `ilysenko/codex-desktop-linux` repository, and pre-configured **openHAB MCP Server** integration via `mcp-remote`.
 
 ---
 
@@ -18,7 +18,7 @@ Deploy an autonomous, headless instance of **Codex Desktop** inside a Proxmox LX
 Run the following commands directly inside your root SSH shell of the Debian 13 LXC container.
 
 ### Step 1: System Dependencies & Toolchain
-Update the system and install all required display drivers, window managers, streaming tools, and Node.js:
+Update the system and install all required display drivers, window managers, streaming tools, compilation tools, and Node.js:
 
 ```bash
 apt update && apt upgrade -y
@@ -34,26 +34,28 @@ apt install -y \
     npm \
     curl \
     git \
+    build-essential \
     dos2unix
 ```
 
-### Step 2: Install Rust Toolchain (Required for Codex/System Packages if building dependencies)
+### Step 2: Clone and Build/Install Codex Desktop from Repository
+
+Clone the official Linux adaptation repository, install dependencies, and build/install the package:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf [https://sh.rustup.rs](https://sh.rustup.rs) | sh -s -- -y
-source "$HOME/.cargo/env"
+cd /opt
+git clone [https://github.com/ilysenko/codex-desktop-linux.git](https://github.com/ilysenko/codex-desktop-linux.git)
+cd codex-desktop-linux
+
+# Install required node modules and build/install (adjust depending on project scripts, e.g., npm install / package build)
+npm install
+# If a build script or deb builder is provided in the repo, compile/install it:
+# (If it provides prebuilt deb or npm package, follow its specific targets, or install globally/locally)
 ```
 
-### Step 3: Install Codex Desktop Package
+*(Note: If the repository provides a `.deb` release or build script, run it here to place `codex-desktop` into your path so `codex-desktop --no-sandbox` works globally).*
 
-Download and install your Codex Desktop `.deb` package (adjust path/filename to your local package build):
-
-```bash
-dpkg -i /path/to/codex-desktop*.deb
-apt --fix-broken install -y
-```
-
-### Step 4: Setup VNC Password
+### Step 3: Setup VNC Password
 
 Configure a secure VNC password for emergency remote access:
 
@@ -63,9 +65,9 @@ x11vnc -storepasswd "YOUR_SECURE_PASSWORD" /root/.vnc/passwd
 chmod 600 /root/.vnc/passwd
 ```
 
-### Step 5: Configure MCP Server (openHAB Integration)
+### Step 4: Configure MCP Server (openHAB Integration)
 
-Create or update the Codex configuration file at `/root/.config/Codex/config.toml` (or `~/.codex/config.toml` depending on your version):
+Create or update the Codex configuration file at `/root/.config/Codex/config.toml` (or `~/.codex/config.toml`):
 
 ```toml
 [mcp_servers.openhab]
@@ -78,9 +80,9 @@ args = [
 ]
 ```
 
-### Step 6: Deploy Project Files
+### Step 5: Deploy Web Remote Project Files
 
-1. Create the project directory:
+1. Create the web project directory:
 ```bash
 mkdir -p /opt/codex-web
 ```
@@ -107,12 +109,13 @@ pip3 install -r /opt/codex-web/requirements.txt --break-system-packages
 
 Because Codex requires an initial OpenAI/ChatGPT sign-in, you must authenticate once via VNC:
 
-1. Connect via any VNC Viewer to: `your-lxc-ip:5900` (Password set in Step 4).
-2. If Codex requests a browser login, click **"Browser didn't open"**, copy the authentication URL, and paste it into a browser running on your workstation, or open Chromium directly inside the container via SSH:
+1. Connect via any VNC Viewer to: `your-lxc-ip:5900` (Password set in Step 3).
+2. If Codex requests a browser login, click **"Browser didn't open"**, copy the authentication URL, and open it via Chromium directly inside the container:
 ```bash
 export DISPLAY=:99
 chromium --no-sandbox "YOUR_OAUTH_URL" &
 ```
+
 
 3. Complete the login flow. Session tokens are saved under `/root/.config/Codex/`.
 
