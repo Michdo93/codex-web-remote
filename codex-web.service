@@ -1,0 +1,14 @@
+[Unit]
+Description=Codex Desktop Web Remote Interface & VNC Backup
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/codex-web
+ExecStart=/usr/bin/bash -x /usr/local/bin/start-codex-headless.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
